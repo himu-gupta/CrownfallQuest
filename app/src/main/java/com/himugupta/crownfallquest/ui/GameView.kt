@@ -11,6 +11,7 @@ import com.himugupta.crownfallquest.game.GameEngine
 import com.himugupta.crownfallquest.game.GameEvent
 import com.himugupta.crownfallquest.game.GameInput
 import com.himugupta.crownfallquest.game.GameMode
+import com.himugupta.crownfallquest.game.HeroForm
 import com.himugupta.crownfallquest.game.LevelDefinition
 
 class GameView(
@@ -20,15 +21,13 @@ class GameView(
   private val soundEnabled: Boolean,
   private val onModeChanged: (GameMode, Int, Int) -> Unit,
 ) : View(context) {
-  private enum class Control { LEFT, RIGHT, JUMP, FIRE, PAUSE, NONE }
-
   private val renderer = GameRenderer()
   private val audio = SynthAudio().apply {
     this.musicEnabled = this@GameView.musicEnabled
     this.soundEnabled = this@GameView.soundEnabled
   }
   private val engine = GameEngine(level)
-  private val pointerControls = mutableMapOf<Int, Control>()
+  private val pointerControls = mutableMapOf<Int, GameControl>()
   private var keyboardLeft = false
   private var keyboardRight = false
   private var keyboardJump = false
@@ -89,9 +88,9 @@ class GameView(
         val id = event.getPointerId(index)
         val control = controlAt(event.getX(index), event.getY(index))
         pointerControls[id] = control
-        if (control == Control.JUMP) jumpPressed = true
-        if (control == Control.FIRE) firePressed = true
-        if (control == Control.PAUSE) {
+        if (control == GameControl.JUMP) jumpPressed = true
+        if (control == GameControl.FIRE) firePressed = true
+        if (control == GameControl.PAUSE) {
           engine.togglePause()
           lastMode = engine.state.mode
           onModeChanged(lastMode, engine.state.score, engine.state.crownShards)
@@ -100,7 +99,14 @@ class GameView(
       MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> pointerControls.remove(event.getPointerId(event.actionIndex))
       MotionEvent.ACTION_CANCEL -> pointerControls.clear()
       MotionEvent.ACTION_MOVE -> {
-        repeat(event.pointerCount) { index -> pointerControls[event.getPointerId(index)] = controlAt(event.getX(index), event.getY(index)) }
+        repeat(event.pointerCount) { index ->
+          val id = event.getPointerId(index)
+          val previous = pointerControls[id]
+          val control = controlAt(event.getX(index), event.getY(index))
+          pointerControls[id] = control
+          if (control != previous && control == GameControl.JUMP) jumpPressed = true
+          if (control != previous && control == GameControl.FIRE) firePressed = true
+        }
       }
     }
     return true
@@ -155,8 +161,8 @@ class GameView(
   }
 
   private fun currentInput(): GameInput {
-    val left = keyboardLeft || Control.LEFT in pointerControls.values
-    val right = keyboardRight || Control.RIGHT in pointerControls.values
+    val left = keyboardLeft || GameControl.LEFT in pointerControls.values
+    val right = keyboardRight || GameControl.RIGHT in pointerControls.values
     val axis = when {
       left && !right -> -1f
       right && !left -> 1f
@@ -165,26 +171,19 @@ class GameView(
     return GameInput(
       moveAxis = axis,
       jumpPressed = jumpPressed,
-      jumpHeld = keyboardJump || Control.JUMP in pointerControls.values,
+      jumpHeld = keyboardJump || GameControl.JUMP in pointerControls.values,
       firePressed = firePressed,
     )
   }
 
   private fun visualControls(): ControlVisualState =
     ControlVisualState(
-      left = keyboardLeft || Control.LEFT in pointerControls.values,
-      right = keyboardRight || Control.RIGHT in pointerControls.values,
-      jump = keyboardJump || Control.JUMP in pointerControls.values,
-      fire = Control.FIRE in pointerControls.values,
+      left = keyboardLeft || GameControl.LEFT in pointerControls.values,
+      right = keyboardRight || GameControl.RIGHT in pointerControls.values,
+      jump = keyboardJump || GameControl.JUMP in pointerControls.values,
+      fire = GameControl.FIRE in pointerControls.values,
     )
 
-  private fun controlAt(x: Float, y: Float): Control = when {
-    y < height * 0.18f && x > width * 0.84f -> Control.PAUSE
-    y < height * 0.56f -> Control.NONE
-    x < width * 0.18f -> Control.LEFT
-    x < width * 0.38f -> Control.RIGHT
-    x > width * 0.84f && y < height * 0.78f -> Control.FIRE
-    x > width * 0.6f -> Control.JUMP
-    else -> Control.NONE
-  }
+  private fun controlAt(x: Float, y: Float): GameControl =
+    GameControlLayout.forSize(width.toFloat(), height.toFloat(), engine.state.player.form == HeroForm.EMBER).controlAt(x, y)
 }

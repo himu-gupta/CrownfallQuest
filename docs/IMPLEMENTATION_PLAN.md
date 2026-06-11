@@ -62,7 +62,7 @@ Exit criteria: green build and tests, playable emulator build, public source rep
 
 ## Release evidence
 
-- 38 deterministic local tests covering geometry, movement, jump timing, collisions, breakable blocks, power-ups, scoring, checkpoints, AI, projectiles, three boss phases, level validation, and progression.
+- 42 deterministic local tests covering geometry, touch-control alignment, movement, jump timing, collisions, terrain-aware enemy travel, breakable blocks, power-ups, scoring, checkpoints, AI, projectiles, three boss phases, level validation, and progression.
 - 3 device tests covering level selection, credits/back navigation, and the menu-to-story-to-playable-surface journey.
 - Successful `assembleDebug`, `testDebugUnitTest`, `connectedDebugAndroidTest`, and `jacocoTestReport` runs.
 - Emulator-reviewed menu, story transition, gameplay, particles, HUD, controls, and pause flow.

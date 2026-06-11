@@ -190,14 +190,7 @@ class GameEngine(
         EnemyKind.WALKER, EnemyKind.ARMORED -> {
           val speed = 1.45f
           enemy.velocity.x = speed * enemy.facing.sign
-          enemy.position.x += enemy.velocity.x * dt
-          if (enemy.position.x <= enemy.spec.patrolStart) {
-            enemy.position.x = enemy.spec.patrolStart
-            enemy.facing = Facing.RIGHT
-          } else if (enemy.position.x + enemy.width >= enemy.spec.patrolEnd) {
-            enemy.position.x = enemy.spec.patrolEnd - enemy.width
-            enemy.facing = Facing.LEFT
-          }
+          moveGroundEnemy(enemy, dt)
         }
         EnemyKind.BOSS -> {
           enemy.phase = bossPhase(enemy.health)
@@ -254,6 +247,29 @@ class GameEngine(
           else -> 0.52f
         }
       }
+    }
+  }
+
+  private fun moveGroundEnemy(enemy: EnemyState, dt: Float) {
+    val nextX = enemy.position.x + enemy.velocity.x * dt
+    val nextBounds = Rect(nextX, enemy.position.y, nextX + enemy.width, enemy.position.y + enemy.height)
+    val leadingFootX = if (enemy.facing == Facing.RIGHT) nextBounds.right - enemy.width * 0.08f else nextBounds.left + enemy.width * 0.08f
+    val hasSupport = state.platforms.any { platform ->
+      !platform.broken &&
+        leadingFootX >= platform.bounds.left &&
+        leadingFootX <= platform.bounds.right &&
+        abs(nextBounds.bottom - platform.bounds.top) <= 0.16f
+    }
+    val hitsObstacle = state.platforms.any { platform ->
+      !platform.broken && !platform.spec.oneWay && nextBounds.overlaps(platform.bounds)
+    }
+    val insideLevel = nextBounds.left >= 0f && nextBounds.right <= state.level.width
+
+    if (insideLevel && hasSupport && !hitsObstacle) {
+      enemy.position.x = nextX
+    } else {
+      enemy.velocity.x = 0f
+      enemy.facing = if (enemy.facing == Facing.RIGHT) Facing.LEFT else Facing.RIGHT
     }
   }
 

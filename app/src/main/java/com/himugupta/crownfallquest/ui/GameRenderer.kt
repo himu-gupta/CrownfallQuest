@@ -421,16 +421,15 @@ class GameRenderer {
   }
 
   private fun drawControls(canvas: Canvas, state: GameState, controls: ControlVisualState) {
-    val radius = canvas.height * 0.095f
-    drawControlCircle(canvas, radius * 1.15f, canvas.height - radius * 1.15f, radius, controls.left, "◀")
-    drawControlCircle(canvas, radius * 3.4f, canvas.height - radius * 1.15f, radius, controls.right, "▶")
-    drawControlCircle(canvas, canvas.width - radius * 2.8f, canvas.height - radius * 1.15f, radius, controls.jump, "JUMP")
-    if (state.player.form == HeroForm.EMBER) {
-      drawControlCircle(canvas, canvas.width - radius * 0.8f, canvas.height - radius * 2.55f, radius * 0.78f, controls.fire, "EMBER")
-    }
+    val layout = GameControlLayout.forSize(canvas.width.toFloat(), canvas.height.toFloat(), state.player.form == HeroForm.EMBER)
+    drawControlCircle(canvas, layout.left, controls.left, "◀")
+    drawControlCircle(canvas, layout.right, controls.right, "▶")
+    drawControlCircle(canvas, layout.jump, controls.jump, "JUMP")
+    layout.fire?.let { drawControlCircle(canvas, it, controls.fire, "EMBER") }
   }
 
-  private fun drawControlCircle(canvas: Canvas, x: Float, y: Float, radius: Float, active: Boolean, label: String) {
+  private fun drawControlCircle(canvas: Canvas, button: ControlButton, active: Boolean, label: String) {
+    val (x, y, radius) = button
     paint.color = if (active) Color.argb(205, 238, 151, 66) else Color.argb(118, 20, 26, 36)
     canvas.drawCircle(x, y, radius, paint)
     stroke.color = Color.argb(180, 255, 255, 255)
