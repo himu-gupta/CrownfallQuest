@@ -33,7 +33,7 @@ Crownfall Quest is an original landscape Android platformer built with Kotlin, C
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Current release verification: 42 local tests, 3 device tests, successful Jacoco report, successful debug APK build, and emulator gameplay review.
+Current release verification: 43 local tests, 3 device tests, successful Jacoco report, successful debug APK build, and emulator gameplay review.
 
 See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) and [docs/testing.md](docs/testing.md).
 

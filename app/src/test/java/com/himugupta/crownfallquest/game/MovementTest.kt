@@ -64,6 +64,23 @@ class MovementTest {
     assertTrue(held.state.player.position.y < released.state.player.position.y - 0.3f)
   }
 
+  @Test fun quickTapJumpReachesTheFirstDawnwoodLog() {
+    val log = PlatformSpec(Rect(5f, 6.3f, 8f, 6.64f), oneWay = true)
+    val engine = GameEngine(
+      testLevel(
+        start = Vec2(6f, 7.1f),
+        platforms = listOf(PlatformSpec(Rect(0f, 8.2f, 12f, 10f)), log),
+      ),
+    )
+    engine.advance(0.2f)
+
+    engine.update(GameEngine.FIXED_STEP, GameInput(jumpPressed = true, jumpHeld = true))
+    engine.advance(0.9f, GameInput(jumpHeld = false))
+
+    assertTrue(engine.state.player.onGround)
+    assertEquals(log.rect.top - engine.state.player.height, engine.state.player.position.y, 0.04f)
+  }
+
   @Test fun guardianBreaksBlocksFromBelow() {
     val block = PlatformSpec(Rect(3f, 5f, 4.4f, 5.72f), breakable = true)
     val engine = GameEngine(

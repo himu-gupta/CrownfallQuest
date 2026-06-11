@@ -19,7 +19,8 @@ class GameEngine(
     private const val GROUND_ACCELERATION = 48f
     private const val AIR_ACCELERATION = 27f
     private const val GROUND_FRICTION = 52f
-    private const val JUMP_SPEED = 11.2f
+    private const val JUMP_SPEED = 12.2f
+    private const val JUMP_RELEASE_SPEED = 10.6f
     private const val COYOTE_TIME = 0.11f
     private const val JUMP_BUFFER_TIME = 0.12f
   }
@@ -118,7 +119,7 @@ class GameEngine(
       player.jumpBufferSeconds = 0f
       emit(GameEvent.Sound(SoundCue.JUMP))
     }
-    if (!input.jumpHeld && player.velocity.y < -4.2f) player.velocity.y = -4.2f
+    if (!input.jumpHeld && player.velocity.y < -JUMP_RELEASE_SPEED) player.velocity.y = -JUMP_RELEASE_SPEED
 
     if (input.firePressed && player.form == HeroForm.EMBER && player.fireCooldownSeconds <= 0f) {
       val spawnX = if (player.facing == Facing.RIGHT) player.position.x + player.width else player.position.x - 0.34f
