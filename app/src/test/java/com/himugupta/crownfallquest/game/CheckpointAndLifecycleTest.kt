@@ -55,5 +55,7 @@ class CheckpointAndLifecycleTest {
     engine.restartLevel()
     assertTrue(!engine.state.pickups.single().collected)
     assertTrue(engine.state.enemies.single().alive)
+    assertEquals(3, engine.state.player.lives)
+    assertEquals(0, engine.state.score)
   }
 }

@@ -51,7 +51,7 @@ class GameEngine(
   }
 
   fun restartLevel() {
-    val fresh = createState(state.level, state.player.lives, state.score)
+    val fresh = createState(state.level, lives = 3, score = 0)
     copyState(fresh)
     accumulator = 0f
   }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,7 +109,8 @@ private fun MainMenu(
   onCredits: () -> Unit,
   onAudioChange: (Boolean, Boolean) -> Unit,
 ) {
-  Box(Modifier.fillMaxSize().background(Color(0xFF25233A))) {
+  BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF25233A))) {
+    val compactLandscape = maxWidth / maxHeight < 1.65f
     Image(
       painter = painterResource(R.drawable.title_art),
       contentDescription = null,
@@ -119,43 +122,96 @@ private fun MainMenu(
         Brush.horizontalGradient(listOf(Color(0xE6202434), Color(0x98202434), Color(0x24202434))),
       ),
     )
-    Column(
-      modifier = Modifier.fillMaxHeight().fillMaxWidth(0.47f).padding(horizontal = 42.dp, vertical = 24.dp),
-      verticalArrangement = Arrangement.Center,
-    ) {
-      Text("CROWNFALL", style = MaterialTheme.typography.displayLarge, color = Color(0xFFFFD479))
-      Text("QUEST", style = MaterialTheme.typography.displayLarge, color = Color.White)
-      Text(
-        "Restore the scattered Crownlight across six handcrafted realms.",
-        color = Color(0xFFE8EDF2),
-        style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(top = 4.dp, bottom = 18.dp),
-      )
-      Button(onClick = onPlay, modifier = Modifier.fillMaxWidth().height(52.dp).testTag("menu_play")) {
-        Text(if (progress.unlockedLevel > 1) "CONTINUE: LEVEL ${progress.unlockedLevel}" else "BEGIN QUEST")
-      }
-      Spacer(Modifier.height(10.dp))
-      OutlinedButton(onClick = onLevels, modifier = Modifier.fillMaxWidth().height(48.dp).testTag("menu_levels")) {
-        Text("LEVEL SELECT")
-      }
-      Spacer(Modifier.height(10.dp))
-      OutlinedButton(onClick = onCredits, modifier = Modifier.fillMaxWidth().height(48.dp).testTag("menu_credits")) {
-        Text("STORY & CREDITS")
-      }
+    if (compactLandscape) {
       Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        AudioToggle("Music", progress.musicEnabled) { onAudioChange(it, progress.soundEnabled) }
-        AudioToggle("Sound", progress.soundEnabled) { onAudioChange(progress.musicEnabled, it) }
+        MenuTitle(compact = true, modifier = Modifier.weight(0.46f))
+        MenuActions(
+          progress = progress,
+          compact = true,
+          onPlay = onPlay,
+          onLevels = onLevels,
+          onCredits = onCredits,
+          onAudioChange = onAudioChange,
+          modifier = Modifier.weight(0.54f),
+        )
+      }
+    } else {
+      Column(
+        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.47f).padding(horizontal = 36.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.Center,
+      ) {
+        MenuTitle(compact = false)
+        MenuActions(
+          progress = progress,
+          compact = false,
+          onPlay = onPlay,
+          onLevels = onLevels,
+          onCredits = onCredits,
+          onAudioChange = onAudioChange,
+        )
       }
     }
+    if (!compactLandscape) {
+      Text(
+        "Original game, art direction, levels, and synthesized score",
+        color = Color(0xFFDDE5E8),
+        modifier = Modifier.align(Alignment.BottomEnd).padding(18.dp),
+      )
+    }
+  }
+}
+
+@Composable
+private fun MenuTitle(compact: Boolean, modifier: Modifier = Modifier) {
+  Column(modifier) {
+    Text(if (compact) "CROWN\nFALL" else "CROWNFALL", style = MaterialTheme.typography.headlineLarge, color = Color(0xFFFFD479))
+    Text("QUEST", style = MaterialTheme.typography.headlineLarge, color = Color.White)
     Text(
-      "Original game, art direction, levels, and synthesized score",
-      color = Color(0xFFDDE5E8),
-      modifier = Modifier.align(Alignment.BottomEnd).padding(18.dp),
+      if (compact) "Restore the Crownlight across six realms." else "Restore the scattered Crownlight across six handcrafted realms.",
+      color = Color(0xFFE8EDF2),
+      style = MaterialTheme.typography.bodyLarge,
+      modifier = Modifier.padding(top = 2.dp, bottom = if (compact) 0.dp else 10.dp),
     )
+  }
+}
+
+@Composable
+private fun MenuActions(
+  progress: ProgressSnapshot,
+  compact: Boolean,
+  onPlay: () -> Unit,
+  onLevels: () -> Unit,
+  onCredits: () -> Unit,
+  onAudioChange: (Boolean, Boolean) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Column(modifier, verticalArrangement = Arrangement.Center) {
+    val primaryHeight = if (compact) 38.dp else 44.dp
+    val secondaryHeight = if (compact) 34.dp else 40.dp
+    val gap = if (compact) 3.dp else 6.dp
+    Button(onClick = onPlay, modifier = Modifier.fillMaxWidth().height(primaryHeight).testTag("menu_play")) {
+      Text(if (progress.unlockedLevel > 1) "CONTINUE: LEVEL ${progress.unlockedLevel}" else "BEGIN QUEST")
+    }
+    Spacer(Modifier.height(gap))
+    OutlinedButton(onClick = onLevels, modifier = Modifier.fillMaxWidth().height(secondaryHeight).testTag("menu_levels")) {
+      Text("LEVEL SELECT")
+    }
+    Spacer(Modifier.height(gap))
+    OutlinedButton(onClick = onCredits, modifier = Modifier.fillMaxWidth().height(secondaryHeight).testTag("menu_credits")) {
+      Text("STORY & CREDITS")
+    }
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(top = if (compact) 0.dp else 4.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      AudioToggle("Music", progress.musicEnabled) { onAudioChange(it, progress.soundEnabled) }
+      AudioToggle("Sound", progress.soundEnabled) { onAudioChange(progress.musicEnabled, it) }
+    }
   }
 }
 
@@ -249,25 +305,27 @@ private fun GameHost(
   }
 
   Box(Modifier.fillMaxSize().background(Color.Black)) {
-    AndroidView(
-      factory = { context ->
-        GameView(
-          context = context,
-          level = level,
-          musicEnabled = progress.musicEnabled,
-          soundEnabled = progress.soundEnabled,
-        ) { newMode, newScore, newShards ->
-          mode = newMode
-          score = newScore
-          shards = newShards
-          if (newMode in setOf(GameMode.LEVEL_COMPLETE, GameMode.CAMPAIGN_COMPLETE) && !completionRecorded) {
-            completionRecorded = true
-            onCompleted(level.id, newScore, newShards > 0)
-          }
-        }.also { gameView = it }
-      },
-      modifier = Modifier.fillMaxSize().testTag("game_surface"),
-    )
+    key(level.id) {
+      AndroidView(
+        factory = { context ->
+          GameView(
+            context = context,
+            level = level,
+            musicEnabled = progress.musicEnabled,
+            soundEnabled = progress.soundEnabled,
+          ) { newMode, newScore, newShards ->
+            mode = newMode
+            score = newScore
+            shards = newShards
+            if (newMode in setOf(GameMode.LEVEL_COMPLETE, GameMode.CAMPAIGN_COMPLETE) && !completionRecorded) {
+              completionRecorded = true
+              onCompleted(level.id, newScore, newShards > 0)
+            }
+          }.also { gameView = it }
+        },
+        modifier = Modifier.fillMaxSize().testTag("game_surface"),
+      )
+    }
 
     when (mode) {
       GameMode.PAUSED -> GameOverlay(
