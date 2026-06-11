@@ -258,7 +258,7 @@ private fun LevelCard(level: LevelDefinition, unlocked: Boolean, bestScore: Int,
   Column(
     modifier = Modifier
       .width(270.dp)
-      .fillMaxHeight(0.76f)
+      .fillMaxHeight(0.84f)
       .clip(RoundedCornerShape(24.dp))
       .background(if (unlocked) colors[level.id - 1] else Color(0xFF343640))
       .border(2.dp, if (hasShard) Color(0xFFFFD479) else Color(0x66FFFFFF), RoundedCornerShape(24.dp))
@@ -269,8 +269,8 @@ private fun LevelCard(level: LevelDefinition, unlocked: Boolean, bestScore: Int,
   ) {
     Column {
       Text(if (unlocked) "REALM ${level.id}" else "LOCKED", color = Color(0xFFFFD479), fontWeight = FontWeight.Bold)
-      Text(level.name, style = MaterialTheme.typography.headlineLarge, color = Color.White, modifier = Modifier.padding(top = 8.dp))
-      Text(level.subtitle, color = Color(0xFFE1E7EA), modifier = Modifier.padding(top = 8.dp))
+      Text(level.name, style = MaterialTheme.typography.titleLarge, color = Color.White, modifier = Modifier.padding(top = 8.dp))
+      Text(level.subtitle, style = MaterialTheme.typography.bodyLarge, color = Color(0xFFE1E7EA), modifier = Modifier.padding(top = 6.dp))
     }
     Column {
       Text("Best score", color = Color(0xFFCCD6DA))
@@ -293,9 +293,10 @@ private fun GameHost(
   var shards by remember(level.id) { mutableIntStateOf(0) }
   var gameView by remember(level.id) { mutableStateOf<GameView?>(null) }
   var completionRecorded by remember(level.id) { mutableStateOf(false) }
+  var showIntro by remember(level.id) { mutableStateOf(true) }
 
   BackHandler {
-    if (mode == GameMode.PAUSED) onExit() else gameView?.let {
+    if (showIntro || mode == GameMode.PAUSED) onExit() else gameView?.let {
       it.pauseGame()
     }
   }
@@ -305,29 +306,33 @@ private fun GameHost(
   }
 
   Box(Modifier.fillMaxSize().background(Color.Black)) {
-    key(level.id) {
-      AndroidView(
-        factory = { context ->
-          GameView(
-            context = context,
-            level = level,
-            musicEnabled = progress.musicEnabled,
-            soundEnabled = progress.soundEnabled,
-          ) { newMode, newScore, newShards ->
-            mode = newMode
-            score = newScore
-            shards = newShards
-            if (newMode in setOf(GameMode.LEVEL_COMPLETE, GameMode.CAMPAIGN_COMPLETE) && !completionRecorded) {
-              completionRecorded = true
-              onCompleted(level.id, newScore, newShards > 0)
-            }
-          }.also { gameView = it }
-        },
-        modifier = Modifier.fillMaxSize().testTag("game_surface"),
-      )
+    if (showIntro) {
+      LevelIntroCard(level = level, onStart = { showIntro = false }, onExit = onExit)
+    } else {
+      key(level.id) {
+        AndroidView(
+          factory = { context ->
+            GameView(
+              context = context,
+              level = level,
+              musicEnabled = progress.musicEnabled,
+              soundEnabled = progress.soundEnabled,
+            ) { newMode, newScore, newShards ->
+              mode = newMode
+              score = newScore
+              shards = newShards
+              if (newMode in setOf(GameMode.LEVEL_COMPLETE, GameMode.CAMPAIGN_COMPLETE) && !completionRecorded) {
+                completionRecorded = true
+                onCompleted(level.id, newScore, newShards > 0)
+              }
+            }.also { gameView = it }
+          },
+          modifier = Modifier.fillMaxSize().testTag("game_surface"),
+        )
+      }
     }
 
-    when (mode) {
+    if (!showIntro) when (mode) {
       GameMode.PAUSED -> GameOverlay(
         title = "Quest paused",
         subtitle = level.name,
@@ -374,6 +379,41 @@ private fun GameHost(
         onExit = onExit,
       )
       GameMode.PLAYING -> Unit
+    }
+  }
+}
+
+@Composable
+private fun LevelIntroCard(level: LevelDefinition, onStart: () -> Unit, onExit: () -> Unit) {
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(Brush.horizontalGradient(listOf(Color(0xFF24263C), Color(0xFF176B6B), Color(0xFF49365E))))
+      .testTag("intro_card"),
+    contentAlignment = Alignment.Center,
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth(0.82f),
+      horizontalArrangement = Arrangement.spacedBy(38.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(Modifier.weight(0.42f)) {
+        Text("REALM ${level.id}", color = Color(0xFFFFD479), fontWeight = FontWeight.Black)
+        Text(level.name, style = MaterialTheme.typography.headlineLarge, color = Color.White, modifier = Modifier.padding(top = 8.dp))
+        Text(level.subtitle, style = MaterialTheme.typography.titleLarge, color = Color(0xFFD8E4E7), modifier = Modifier.padding(top = 6.dp))
+      }
+      Column(Modifier.weight(0.58f)) {
+        Text(level.intro, color = Color.White, style = MaterialTheme.typography.titleLarge)
+        Text(
+          "Find the Crown shard, light the checkpoint, and reach the beacon before time runs out.",
+          color = Color(0xFFC5D4D8),
+          modifier = Modifier.padding(top = 10.dp, bottom = 18.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+          Button(onClick = onStart, modifier = Modifier.testTag("start_level")) { Text("ENTER REALM") }
+          OutlinedButton(onClick = onExit) { Text("BACK") }
+        }
+      }
     }
   }
 }

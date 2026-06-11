@@ -187,10 +187,28 @@ class GameEngine(
       enemy.stateSeconds += dt
       enemy.shotCooldownSeconds -= dt
       when (enemy.spec.kind) {
-        EnemyKind.WALKER, EnemyKind.ARMORED, EnemyKind.BOSS -> {
-          val speed = if (enemy.spec.kind == EnemyKind.BOSS) 2.2f else 1.45f
+        EnemyKind.WALKER, EnemyKind.ARMORED -> {
+          val speed = 1.45f
           enemy.velocity.x = speed * enemy.facing.sign
           enemy.position.x += enemy.velocity.x * dt
+          if (enemy.position.x <= enemy.spec.patrolStart) {
+            enemy.position.x = enemy.spec.patrolStart
+            enemy.facing = Facing.RIGHT
+          } else if (enemy.position.x + enemy.width >= enemy.spec.patrolEnd) {
+            enemy.position.x = enemy.spec.patrolEnd - enemy.width
+            enemy.facing = Facing.LEFT
+          }
+        }
+        EnemyKind.BOSS -> {
+          enemy.phase = bossPhase(enemy.health)
+          val speed = when (enemy.phase) {
+            1 -> 2.2f
+            2 -> 3.1f
+            else -> 4.15f
+          }
+          enemy.velocity.x = speed * enemy.facing.sign
+          enemy.position.x += enemy.velocity.x * dt
+          enemy.position.y = enemy.spec.y + if (enemy.phase == 1) 0f else sin(enemy.stateSeconds * (1.7f + enemy.phase)) * (0.18f * enemy.phase)
           if (enemy.position.x <= enemy.spec.patrolStart) {
             enemy.position.x = enemy.spec.patrolStart
             enemy.facing = Facing.RIGHT
@@ -213,15 +231,28 @@ class GameEngine(
       val canShoot = enemy.spec.kind == EnemyKind.TURRET || enemy.spec.kind == EnemyKind.BOSS
       if (canShoot && enemy.shotCooldownSeconds <= 0f && abs(player.position.x - enemy.position.x) < 10f) {
         val direction = if (player.position.x < enemy.position.x) -1f else 1f
-        state.projectiles +=
-          ProjectileState(
-            id = projectileId++,
-            position = Vec2(enemy.position.x + enemy.width * 0.5f, enemy.position.y + enemy.height * 0.35f),
-            velocity = Vec2(direction * if (enemy.spec.kind == EnemyKind.BOSS) 6.2f else 4.8f, 0f),
-            friendly = false,
-            remainingSeconds = 3f,
-          )
-        enemy.shotCooldownSeconds = if (enemy.spec.kind == EnemyKind.BOSS) 1.1f else 2.2f
+        val verticalVelocities = when {
+          enemy.spec.kind != EnemyKind.BOSS -> listOf(0f)
+          enemy.phase == 1 -> listOf(0f)
+          enemy.phase == 2 -> listOf(-1.6f, 1.6f)
+          else -> listOf(-2.5f, 0f, 2.5f)
+        }
+        verticalVelocities.forEach { verticalVelocity ->
+          state.projectiles +=
+            ProjectileState(
+              id = projectileId++,
+              position = Vec2(enemy.position.x + enemy.width * 0.5f, enemy.position.y + enemy.height * 0.35f),
+              velocity = Vec2(direction * (if (enemy.spec.kind == EnemyKind.BOSS) 6.2f + enemy.phase else 4.8f), verticalVelocity),
+              friendly = false,
+              remainingSeconds = 3f,
+            )
+        }
+        enemy.shotCooldownSeconds = when {
+          enemy.spec.kind != EnemyKind.BOSS -> 2.2f
+          enemy.phase == 1 -> 1.1f
+          enemy.phase == 2 -> 0.78f
+          else -> 0.52f
+        }
       }
     }
   }
@@ -315,7 +346,9 @@ class GameEngine(
   }
 
   private fun damageEnemy(enemy: EnemyState, projectileHit: Boolean) {
+    val previousPhase = enemy.phase
     enemy.health -= 1
+    enemy.phase = if (enemy.spec.kind == EnemyKind.BOSS) bossPhase(enemy.health) else 1
     if (enemy.health <= 0) {
       enemy.alive = false
       val points = if (enemy.spec.kind == EnemyKind.BOSS) 5000 else if (enemy.spec.kind == EnemyKind.ARMORED) 400 else 200
@@ -325,10 +358,20 @@ class GameEngine(
         emit(GameEvent.BossDefeated)
       }
     } else {
+      if (enemy.spec.kind == EnemyKind.BOSS && enemy.phase > previousPhase) {
+        showMessage(if (enemy.phase == 2) "The Warden breaks its chains" else "Final phase: starstorm")
+        state.shakeSeconds = 0.35f
+      }
       addScore(if (projectileHit) 100 else 150)
       state.shakeSeconds = 0.16f
       emit(GameEvent.Sound(if (enemy.spec.kind == EnemyKind.BOSS) SoundCue.BOSS_HIT else SoundCue.HIT))
     }
+  }
+
+  private fun bossPhase(health: Int): Int = when {
+    health >= 6 -> 1
+    health >= 3 -> 2
+    else -> 3
   }
 
   private fun damagePlayer(sourceX: Float? = null) {

@@ -19,6 +19,7 @@ class LevelCatalogTest {
       assertTrue("${level.name} needs growth", level.pickups.any { it.kind == PickupKind.MOONCAP })
       assertTrue("${level.name} needs ember power", level.pickups.any { it.kind == PickupKind.EMBER_BLOOM })
       assertTrue("${level.name} needs a shard", level.pickups.any { it.kind == PickupKind.CROWN_SHARD })
+      assertTrue("${level.name} needs a breakable secret", level.platforms.any { it.breakable })
       assertTrue(level.start.x in 0f..level.width)
       assertTrue(level.goal.left > level.start.x)
       assertTrue(level.goal.right <= level.width)

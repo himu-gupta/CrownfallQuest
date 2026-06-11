@@ -16,6 +16,7 @@ import com.himugupta.crownfallquest.game.PickupKind
 import com.himugupta.crownfallquest.game.Rect
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 
 class GameRenderer {
@@ -29,7 +30,13 @@ class GameRenderer {
     cameraX = state.cameraX
     val palette = Palette.forBiome(state.level.biome)
     drawBackdrop(canvas, state, palette)
+    canvas.save()
+    if (state.shakeSeconds > 0f) {
+      val strength = 5f + state.shakeSeconds * 18f
+      canvas.translate(sin(state.elapsedSeconds * 73f) * strength, cos(state.elapsedSeconds * 61f) * strength)
+    }
     drawWorld(canvas, state, palette)
+    canvas.restore()
     drawHud(canvas, state)
     drawControls(canvas, state, controls)
     drawMessage(canvas, state)
@@ -71,7 +78,11 @@ class GameRenderer {
   private fun drawWorld(canvas: Canvas, state: GameState, palette: Palette) {
     state.platforms.filter { !it.broken }.forEach { platform ->
       val rect = screenRect(platform.bounds)
-      paint.color = if (platform.spec.oneWay) palette.ledge else palette.ground
+      paint.color = when {
+        platform.spec.breakable -> Color.rgb(158, 111, 68)
+        platform.spec.oneWay -> palette.ledge
+        else -> palette.ground
+      }
       canvas.drawRoundRect(rect, 5f, 5f, paint)
       paint.color = palette.grass
       canvas.drawRect(rect.left, rect.top, rect.right, rect.top + maxOf(4f, scale * 0.13f), paint)
@@ -79,6 +90,13 @@ class GameRenderer {
         stroke.color = Color.argb(130, 255, 255, 255)
         stroke.strokeWidth = 2f
         canvas.drawRoundRect(rect, 5f, 5f, stroke)
+      }
+      if (platform.spec.breakable) {
+        stroke.color = Color.rgb(89, 59, 43)
+        stroke.strokeWidth = maxOf(2f, scale * 0.035f)
+        canvas.drawLine(rect.left + rect.width() * 0.25f, rect.top, rect.centerX(), rect.centerY(), stroke)
+        canvas.drawLine(rect.centerX(), rect.centerY(), rect.left + rect.width() * 0.38f, rect.bottom, stroke)
+        canvas.drawLine(rect.centerX(), rect.centerY(), rect.right - rect.width() * 0.18f, rect.top + rect.height() * 0.28f, stroke)
       }
     }
 
@@ -132,7 +150,40 @@ class GameRenderer {
       paint.color = Color.argb(120, 255, 240, 180)
       canvas.drawOval(RectF(rect.left - rect.width(), rect.top + rect.height() * 0.25f, rect.left + 3f, rect.bottom - rect.height() * 0.25f), paint)
     }
+    drawParticles(canvas, state, palette)
     drawPlayer(canvas, state)
+  }
+
+  private fun drawParticles(canvas: Canvas, state: GameState, palette: Palette) {
+    repeat(18) { index ->
+      val drift = state.elapsedSeconds * (12f + index % 4 * 3f)
+      val x = ((index * 173f + drift - state.cameraX * scale * 0.25f) % (canvas.width + 80f)) - 40f
+      val y = canvas.height * (0.16f + (index % 7) * 0.09f) + sin(state.elapsedSeconds * 1.7f + index) * 11f
+      paint.color = Color.argb(45 + index % 3 * 18, Color.red(palette.sun), Color.green(palette.sun), Color.blue(palette.sun))
+      canvas.drawCircle(x, y, 2.5f + index % 3, paint)
+    }
+
+    val player = state.player
+    if (player.onGround && abs(player.velocity.x) > 1f) {
+      repeat(5) { index ->
+        val life = (state.elapsedSeconds * 5f + index * 0.19f) % 1f
+        val direction = -player.facing.sign
+        val x = sx(player.position.x + player.width * 0.5f) + direction * life * scale * 0.75f
+        val y = sy(player.position.y + player.height) - life * scale * 0.25f
+        paint.color = Color.argb(((1f - life) * 120).toInt(), 224, 205, 159)
+        canvas.drawCircle(x, y, scale * (0.08f + life * 0.08f), paint)
+      }
+    }
+
+    state.projectiles.forEach { projectile ->
+      repeat(4) { index ->
+        val trail = index * 0.12f
+        val x = sx(projectile.position.x - projectile.velocity.x * trail)
+        val y = sy(projectile.position.y - projectile.velocity.y * trail)
+        paint.color = if (projectile.friendly) Color.argb(120 - index * 24, 255, 184, 70) else Color.argb(105 - index * 20, 193, 116, 231)
+        canvas.drawCircle(x, y, scale * (0.08f - index * 0.012f), paint)
+      }
+    }
   }
 
   private fun drawPlayer(canvas: Canvas, state: GameState) {
@@ -228,7 +279,11 @@ class GameRenderer {
         drawEnemyEyes(canvas, rect, enemy.facing)
       }
       EnemyKind.BOSS -> {
-        paint.color = if ((enemy.stateSeconds * 8).toInt() % 2 == 0) Color.rgb(74, 47, 91) else Color.rgb(91, 54, 104)
+        paint.color = when (enemy.phase) {
+          1 -> if ((enemy.stateSeconds * 8).toInt() % 2 == 0) Color.rgb(74, 47, 91) else Color.rgb(91, 54, 104)
+          2 -> if ((enemy.stateSeconds * 10).toInt() % 2 == 0) Color.rgb(114, 48, 104) else Color.rgb(138, 61, 91)
+          else -> if ((enemy.stateSeconds * 14).toInt() % 2 == 0) Color.rgb(163, 53, 71) else Color.rgb(94, 49, 126)
+        }
         canvas.drawRoundRect(rect, rect.width() * 0.2f, rect.width() * 0.2f, paint)
         paint.color = Color.rgb(214, 153, 65)
         val crown = Path().apply {

@@ -63,4 +63,20 @@ class MovementTest {
     released.advance(0.32f, GameInput(jumpHeld = false))
     assertTrue(held.state.player.position.y < released.state.player.position.y - 0.3f)
   }
+
+  @Test fun guardianBreaksBlocksFromBelow() {
+    val block = PlatformSpec(Rect(3f, 5f, 4.4f, 5.72f), breakable = true)
+    val engine = GameEngine(
+      testLevel(
+        start = Vec2(3.2f, 6.5f),
+        platforms = listOf(PlatformSpec(Rect(0f, 8f, 24f, 10f)), block),
+      ),
+    )
+    engine.state.player.form = HeroForm.GUARDIAN
+    engine.state.player.position.y = 6f
+    engine.state.player.velocity.y = -12f
+    engine.advance(0.12f, GameInput(jumpHeld = true))
+    assertTrue(engine.state.platforms.last().broken)
+    assertTrue(engine.state.score >= 75)
+  }
 }

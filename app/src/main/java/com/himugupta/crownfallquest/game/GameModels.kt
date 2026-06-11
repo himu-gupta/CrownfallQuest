@@ -102,6 +102,7 @@ data class EnemyState(
   var facing: Facing = Facing.LEFT,
   var health: Int = if (spec.kind == EnemyKind.BOSS) 8 else if (spec.kind == EnemyKind.ARMORED) 2 else 1,
   var alive: Boolean = true,
+  var phase: Int = 1,
   var stateSeconds: Float = 0f,
   var shotCooldownSeconds: Float = 1.5f,
 ) {

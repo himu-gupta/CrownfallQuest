@@ -35,4 +35,13 @@ class CrownfallQuestAppTest {
     compose.onNodeWithTag("credits_back").performClick()
     compose.onNodeWithTag("menu_play").assertIsDisplayed()
   }
+
+  @Test fun beginQuestShowsStoryCardAndLaunchesPlayableSurface() {
+    compose.setContent { CrownfallQuestTheme { CrownfallQuestApp(FakeStore()) } }
+    compose.onNodeWithTag("menu_play").performClick()
+    compose.onNodeWithTag("intro_card").assertIsDisplayed()
+    compose.onNodeWithText("Glasswater Grotto").assertIsDisplayed()
+    compose.onNodeWithTag("start_level").performClick()
+    compose.onNodeWithTag("game_surface").assertExists()
+  }
 }
