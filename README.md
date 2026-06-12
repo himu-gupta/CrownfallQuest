@@ -21,9 +21,9 @@ Crownfall Quest is an original landscape Android platformer built with Kotlin, C
 
 | Realm story | Gameplay |
 | --- | --- |
-| ![Dawnwood Trail story card](docs/screenshots/level-intro.png) | ![Dawnwood Trail gameplay](docs/screenshots/gameplay.png) |
+| ![Dawnwood Trail story card](docs/screenshots/level-intro.png) | ![Crownfall Quest pause menu](docs/screenshots/paused.png) |
 
-![Crownfall Quest pause menu](docs/screenshots/paused.png)
+![Dawnwood Trail gameplay](docs/screenshots/gameplay.png)
 
 ## Build
 
